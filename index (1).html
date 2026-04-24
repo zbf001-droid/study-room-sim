@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Room Occupancy Survey</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #ffffff;
+      color: #1a1a1a;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 24px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .metric-card {
+      background: #f5f5f3;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .metric-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .metric-value {
+      font-size: 22px;
+      font-weight: 500;
+    }
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 320px;
+      margin-bottom: 12px;
+    }
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 32px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+    }
+    .legend-dash {
+      display: inline-block;
+      width: 24px;
+      border-top: 2px dashed #E24B4A;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 12px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e5e5;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 10px;
+      color: #666;
+      font-weight: 500;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    th:not(:first-child) { text-align: center; }
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    td:not(:first-child):not(:last-child) { text-align: center; }
+    .bar-bg {
+      background: #ebebeb;
+      border-radius: 3px;
+      height: 8px;
+      width: 100%;
+      max-width: 160px;
+    }
+    .bar-fill {
+      border-radius: 3px;
+      height: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Study Room Occupancy — Survey Results</h1>
+  <p class="subtitle">Simulated survey of 20 students: "How likely are you to book a study room at this time?" &nbsp;|&nbsp; 7:00 AM – 12:00 AM in 30-min slots</p>
+
+  <div class="metrics">
+    <div class="metric-card"><div class="metric-label">Survey respondents</div><div class="metric-value">20</div></div>
+    <div class="metric-card"><div class="metric-label">Avg occupancy</div><div class="metric-value">40%</div></div>
+    <div class="metric-card"><div class="metric-label">Peak slot</div><div class="metric-value">7:30 PM</div></div>
+    <div class="metric-card"><div class="metric-label">Slots tracked</div><div class="metric-value">34</div></div>
+  </div>
+
+  <div class="chart-wrapper">
+    <canvas id="occupancyChart" role="img" aria-label="Bar chart of study room booking likelihood in 30-minute slots from 7am to midnight, averaging 40%."></canvas>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:#93bde0;"></span> Below average</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:#3a82c4;"></span> Above average</span>
+    <span class="legend-item"><span class="legend-dash"></span> 40% avg</span>
+  </div>
+
+  <div class="section-title">Survey responses — "How likely are you to book a study room at this time?" (n=20)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Time slot</th>
+        <th>Students who said yes</th>
+        <th>Likelihood</th>
+        <th>Response bar</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script>
+    const slots = [
+      '7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM',
+      '10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM',
+      '1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM',
+      '4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM','6:30 PM',
+      '7:00 PM','7:30 PM','8:00 PM','8:30 PM','9:00 PM','9:30 PM',
+      '10:00 PM','10:30 PM','11:00 PM','11:30 PM','12:00 AM'
+    ];
+
+    const shortLabels = [
+      '7:00','7:30','8:00','8:30','9:00','9:30',
+      '10:00','10:30','11:00','11:30','12:00','12:30',
+      '1:00','1:30','2:00','2:30','3:00','3:30',
+      '4:00','4:30','5:00','5:30','6:00','6:30',
+      '7:00p','7:30p','8:00p','8:30p','9:00p','9:30p',
+      '10:00p','10:30p','11:00p','11:30p','12:00a'
+    ];
+
+    const data = [
+      8, 10, 13, 16, 20, 25,
+      28, 30, 33, 35, 38, 40,
+      37, 35, 45, 50, 58, 60,
+      58, 54, 48, 44, 40, 38,
+      58, 70, 68, 65, 62, 55,
+      44, 40, 25, 20, 13
+    ];
+
+    const HIGH = '#3a82c4';
+    const LOW  = '#93bde0';
+    const colors = data.map(v => v >= 40 ? HIGH : LOW);
+
+    new Chart(document.getElementById('occupancyChart'), {
+      type: 'bar',
+      data: {
+        labels: shortLabels,
+        datasets: [{
+          label: 'Booking likelihood (%)',
+          data,
+          backgroundColor: colors,
+          borderRadius: 3,
+          borderSkipped: false,
+        },{
+          label: 'Average (40%)',
+          data: new Array(data.length).fill(40),
+          type: 'line',
+          borderColor: '#E24B4A',
+          borderDash: [5, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ctx.dataset.type === 'line' ? '40% average' : `${ctx.raw}% likely to book`
+            }
+          }
+        },
+        scales: {
+          y: {
+            min: 0, max: 85,
+            ticks: { callback: v => v + '%', stepSize: 20, color: '#888780', font: { size: 12 } },
+            grid: { color: 'rgba(136,135,128,0.15)' }
+          },
+          x: {
+            ticks: { autoSkip: true, maxTicksLimit: 18, maxRotation: 45, color: '#888780', font: { size: 10 } },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+
+    const tbody = document.getElementById('tableBody');
+    data.forEach((val, i) => {
+      const students = Math.round(val / 5);
+      const isHigh = val >= 40;
+      const color = isHigh ? HIGH : LOW;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${slots[i]}</td>
+        <td style="text-align:center;">${students} / 20</td>
+        <td style="text-align:center; font-weight:500; color:${isHigh ? '#185FA5' : '#555'};">${val}%</td>
+        <td>
+          <div class="bar-bg">
+            <div class="bar-fill" style="background:${color}; width:${val}%;"></div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  </script>
+</body>
+</html>
